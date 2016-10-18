@@ -1,0 +1,159 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "mysql-persistent-template",
+        "creationTimestamp": null,
+        "annotations": {
+            "description": "An example of mysql db",
+            "tags": "db,mysql",
+            "iconClass": "icon-mysql"
+        }
+    },
+    "labels": {
+        "template": "mysql-persistent-template"
+    },
+    "parameters": [{
+        "name": "MYSQL_USER",
+        "description": "The db user to be created",
+        "value": "sa"
+    }, {
+        "name": "MYSQL_PASSWORD",
+        "description": "The password of the created db user",
+        "value": "sa"
+    }, {
+        "name": "MYSQL_DATABASE",
+        "description": "The db to be created",
+        "value": "mydb"
+    }],
+    "objects": [{
+        "kind": "DeploymentConfig",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "mysql-deployment",
+            "creationTimestamp": null
+        },
+        "spec": {
+            "strategy": {
+                "type": "Recreate",
+                "recreateParams": {},
+                "resources": {}
+            },
+            "triggers": [{
+                "type": "ImageChange",
+                "imageChangeParams": {
+                    "automatic": true,
+                    "containerNames": [
+                        "mysql"
+                    ],
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "namespace": "openshift",
+                        "name": "mysql:latest"
+                    }
+                }
+            }, {
+                "type": "ConfigChange"
+            }],
+            "replicas": 1,
+            "selector": {
+                "name": "mysql"
+            },
+            "template": {
+                "metadata": {
+                    "creationTimestamp": null,
+                    "labels": {
+                        "name": "mysql"
+                    }
+                },
+                "spec": {
+                    "volumes": [{
+                        "name": "mysql-data",
+                        "persistentVolumeClaim": {
+                            "claimName": "mysql"
+                        }
+                    }],
+                    "containers": [{
+                        "name": "mysql",
+                        "image": "registry.access.redhat.com/rhscl/mysql-56-rhel7:latest",
+                        "ports": [{
+                            "containerPort": 3306,
+                            "protocol": "TCP"
+                        }],
+                        "env": [{
+                            "name": "MYSQL_USER",
+                            "value": "${MYSQL_USER}"
+                        }, {
+                            "name": "MYSQL_PASSWORD",
+                            "value": "${MYSQL_PASSWORD}"
+                        }, {
+                            "name": "MYSQL_DATABASE",
+                            "value": "${MYSQL_DATABASE}"
+                        }],
+                        "resources": {
+                            "limits": {
+                                "memory": "512Mi"
+                            }
+                        },
+                        "volumeMounts": [{
+                            "name": "mysql-data",
+                            "mountPath": "/var/lib/mysql/data"
+                        }],
+                        "livenessProbe": {
+                            "tcpSocket": {
+                                "port": 3306
+                            },
+                            "initialDelaySeconds": 30,
+                            "timeoutSeconds": 1
+                        },
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "/bin/sh",
+                                    "-i",
+                                    "-c",
+                                    "MYSQL_PWD=\"$MYSQL_PASSWORD\" mysql -h 127.0.0.1 -u $MYSQL_USER -D $MYSQL_DATABASE -e 'SELECT 1'"
+                                ]
+                            },
+                            "initialDelaySeconds": 5,
+                            "timeoutSeconds": 1
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent"
+                    }],
+                    "restartPolicy": "Always",
+                    "terminationGracePeriodSeconds": 30,
+                    "dnsPolicy": "ClusterFirst",
+                    "securityContext": {}
+                }
+            }
+        },
+        "status": {}
+    }, {
+        "kind": "Service",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "mysql-service",
+            "creationTimestamp": null,
+            "labels": {
+                "db": "mysql"
+            }
+        },
+        "spec": {
+            "ports": [{
+                "name": "mysql",
+                "protocol": "TCP",
+                "port": 3306,
+                "targetPort": 3306
+            }],
+            "selector": {
+                "name": "mysql-deployment"
+            },
+            "type": "ClusterIP",
+            "sessionAffinity": "None"
+        },
+        "status": {
+            "loadBalancer": {}
+        }
+    }]
+}

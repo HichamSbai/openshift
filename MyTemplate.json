@@ -1,0 +1,553 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "MyTemplate",
+        "creationTimestamp": null
+    },
+    "objects": [
+        {
+            "kind": "BuildConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "myjbossapp",
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "myjbossapp"
+                },
+                "annotations": {
+                    "openshift.io/generated-by": "OpenShiftWebConsole"
+                }
+            },
+            "spec": {
+                "triggers": [
+                    {
+                        "type": "Generic",
+                        "generic": {
+                            "secret": "04e87315934bd93a"
+                        }
+                    },
+                    {
+                        "type": "GitHub",
+                        "github": {
+                            "secret": "8c1e42989440bf52"
+                        }
+                    },
+                    {
+                        "type": "ImageChange",
+                        "imageChange": {}
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "source": {
+                    "type": "Git",
+                    "git": {
+                        "uri": "https://github.com/HichamSbai/myjbossapp.git",
+                        "ref": "master",
+                        "httpProxy": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888",
+                        "httpsProxy": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+                    }
+                },
+                "strategy": {
+                    "type": "Source",
+                    "sourceStrategy": {
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "namespace": "openshift",
+                            "name": "jboss-eap64-openshift:1.1"
+                        },
+                        "env": [
+                            {
+                                "name": "HTTP_PROXY",
+                                "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+                            },
+                            {
+                                "name": "HTTPS_PROXY",
+                                "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+                            },
+                            {
+                                "name": "MAVEN_ARGS",
+                                "value": "package -Popenshift -DskipTests -s./settings.xml"
+                            }
+                        ]
+                    }
+                },
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "myjbossapp:latest"
+                    }
+                },
+                "resources": {}
+            },
+            "status": {
+                "lastVersion": 0
+            }
+        },
+        {
+            "kind": "BuildConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "mynodejsapp",
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "mynodejsapp"
+                },
+                "annotations": {
+                    "openshift.io/generated-by": "OpenShiftWebConsole"
+                }
+            },
+            "spec": {
+                "triggers": [
+                    {
+                        "type": "Generic",
+                        "generic": {
+                            "secret": "4847d6b07c33e75f"
+                        }
+                    },
+                    {
+                        "type": "GitHub",
+                        "github": {
+                            "secret": "48066096f1f51dbc"
+                        }
+                    },
+                    {
+                        "type": "ImageChange",
+                        "imageChange": {}
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "source": {
+                    "type": "Git",
+                    "git": {
+                        "uri": "https://github.com/openshift/nodejs-ex.git",
+                        "ref": "master",
+                        "httpProxy": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888",
+                        "httpsProxy": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+                    }
+                },
+                "strategy": {
+                    "type": "Source",
+                    "sourceStrategy": {
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "namespace": "openshift",
+                            "name": "nodejs:0.10"
+                        },
+                        "env": [
+                            {
+                                "name": "HTTP_PROXY",
+                                "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+                            },
+                            {
+                                "name": "HTTPS_PROXY",
+                                "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+                            }
+                        ]
+                    }
+                },
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "mynodejsapp:latest"
+                    }
+                },
+                "resources": {}
+            },
+            "status": {
+                "lastVersion": 0
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "myjbossapp",
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "myjbossapp"
+                },
+                "annotations": {
+                    "openshift.io/generated-by": "OpenShiftWebConsole"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "8080-tcp",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    },
+                    {
+                        "name": "8443-tcp",
+                        "protocol": "TCP",
+                        "port": 8443,
+                        "targetPort": 8443
+                    }
+                ],
+                "selector": {
+                    "deploymentconfig": "myjbossapp"
+                },
+                "type": "ClusterIP",
+                "sessionAffinity": "None"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "mynodejsapp",
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "mynodejsapp"
+                },
+                "annotations": {
+                    "openshift.io/generated-by": "OpenShiftWebConsole"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "8080-tcp",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "deploymentconfig": "mynodejsapp"
+                },
+                "type": "ClusterIP",
+                "sessionAffinity": "None"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "mysql",
+                "creationTimestamp": null,
+                "labels": {
+                    "name": "mydatabase",
+                    "template": "mysql-persistent-template"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "mysql",
+                        "protocol": "TCP",
+                        "port": 3306,
+                        "targetPort": 3306
+                    }
+                ],
+                "selector": {
+                    "name": "mysql"
+                },
+                "type": "ClusterIP",
+                "sessionAffinity": "None"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "myjbossapp",
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "myjbossapp"
+                },
+                "annotations": {
+                    "openshift.io/generated-by": "OpenShiftWebConsole"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Rolling",
+                    "rollingParams": {
+                        "updatePeriodSeconds": 1,
+                        "intervalSeconds": 1,
+                        "timeoutSeconds": 600,
+                        "maxUnavailable": "25%",
+                        "maxSurge": "25%"
+                    },
+                    "resources": {}
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "myjbossapp"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "name": "myjbossapp:latest"
+                            }
+                        }
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 2,
+                "selector": {
+                    "deploymentconfig": "myjbossapp"
+                },
+                "template": {
+                    "metadata": {
+                        "creationTimestamp": null,
+                        "labels": {
+                            "app": "myjbossapp",
+                            "deploymentconfig": "myjbossapp"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "myjbossapp",
+                                "image": "172.30.37.22:5000/axach-bpm/myjbossapp@sha256:078c4255b40209dac04d615d0a81cbd3efa315e2e5e78247aed25fa3aec32b91",
+                                "ports": [
+                                    {
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
+                                    },
+                                    {
+                                        "containerPort": 8443,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "imagePullPolicy": "Always"
+                            }
+                        ],
+                        "restartPolicy": "Always",
+                        "terminationGracePeriodSeconds": 30,
+                        "dnsPolicy": "ClusterFirst",
+                        "securityContext": {}
+                    }
+                }
+            },
+            "status": {}
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "mynodejsapp",
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "mynodejsapp"
+                },
+                "annotations": {
+                    "openshift.io/generated-by": "OpenShiftWebConsole"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Rolling",
+                    "rollingParams": {
+                        "updatePeriodSeconds": 1,
+                        "intervalSeconds": 1,
+                        "timeoutSeconds": 600,
+                        "maxUnavailable": "25%",
+                        "maxSurge": "25%"
+                    },
+                    "resources": {}
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "mynodejsapp"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "name": "mynodejsapp:latest"
+                            }
+                        }
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 0,
+                "selector": {
+                    "deploymentconfig": "mynodejsapp"
+                },
+                "template": {
+                    "metadata": {
+                        "creationTimestamp": null,
+                        "labels": {
+                            "app": "mynodejsapp",
+                            "deploymentconfig": "mynodejsapp"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "mynodejsapp",
+                                "image": "172.30.37.22:5000/axach-bpm/mynodejsapp@sha256:c767e37123f318ea778053df05885acc8e786593913e9b57695d6393250a8dac",
+                                "ports": [
+                                    {
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "imagePullPolicy": "Always"
+                            }
+                        ],
+                        "restartPolicy": "Always",
+                        "terminationGracePeriodSeconds": 30,
+                        "dnsPolicy": "ClusterFirst",
+                        "securityContext": {}
+                    }
+                }
+            },
+            "status": {}
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "mysql",
+                "creationTimestamp": null,
+                "labels": {
+                    "name": "mydatabase",
+                    "template": "mysql-persistent-template"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Recreate",
+                    "recreateParams": {},
+                    "resources": {}
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "mysql"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "namespace": "openshift",
+                                "name": "mysql:latest"
+                            }
+                        }
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 1,
+                "selector": {
+                    "name": "mysql"
+                },
+                "template": {
+                    "metadata": {
+                        "creationTimestamp": null,
+                        "labels": {
+                            "name": "mysql"
+                        }
+                    },
+                    "spec": {
+                        "volumes": [
+                            {
+                                "name": "mysql-data",
+                                "persistentVolumeClaim": {
+                                    "claimName": "mysql"
+                                }
+                            }
+                        ],
+                        "containers": [
+                            {
+                                "name": "mysql",
+                                "image": "registry.access.redhat.com/rhscl/mysql-56-rhel7:latest",
+                                "ports": [
+                                    {
+                                        "containerPort": 3306,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "env": [
+                                    {
+                                        "name": "MYSQL_USER",
+                                        "value": "hicham"
+                                    },
+                                    {
+                                        "name": "MYSQL_PASSWORD",
+                                        "value": "pass"
+                                    },
+                                    {
+                                        "name": "MYSQL_DATABASE",
+                                        "value": "sampledb"
+                                    }
+                                ],
+                                "resources": {
+                                    "limits": {
+                                        "memory": "512Mi"
+                                    }
+                                },
+                                "volumeMounts": [
+                                    {
+                                        "name": "mysql-data",
+                                        "mountPath": "/var/lib/mysql/data"
+                                    }
+                                ],
+                                "livenessProbe": {
+                                    "tcpSocket": {
+                                        "port": 3306
+                                    },
+                                    "initialDelaySeconds": 30,
+                                    "timeoutSeconds": 1
+                                },
+                                "readinessProbe": {
+                                    "exec": {
+                                        "command": [
+                                            "/bin/sh",
+                                            "-i",
+                                            "-c",
+                                            "MYSQL_PWD=\"$MYSQL_PASSWORD\" mysql -h 127.0.0.1 -u $MYSQL_USER -D $MYSQL_DATABASE -e 'SELECT 1'"
+                                        ]
+                                    },
+                                    "initialDelaySeconds": 5,
+                                    "timeoutSeconds": 1
+                                },
+                                "terminationMessagePath": "/dev/termination-log",
+                                "imagePullPolicy": "IfNotPresent"
+                            }
+                        ],
+                        "restartPolicy": "Always",
+                        "terminationGracePeriodSeconds": 30,
+                        "dnsPolicy": "ClusterFirst",
+                        "securityContext": {}
+                    }
+                }
+            },
+            "status": {}
+        }
+    ]
+}

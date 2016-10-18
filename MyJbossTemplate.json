@@ -1,0 +1,253 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "eap64-app-template",
+        "creationTimestamp": null,
+        "annotations": {
+            "description": "An example of BPME application",
+            "tags": "instant-app,java,eap64",
+            "iconClass": "icon-java"
+        }
+    },
+    "labels": {
+        "template": "eap64-app-template"
+    },
+    "parameters": [{
+        "name": "SOURCE_REPOSITORY_URL",
+        "description": "The URL of the repository with my application source code",
+        "value": "https://github.com/HichamSbai/myjbossapp.git",
+        "requires": "true"
+    }, {
+        "name": "GITHUB_WEBHOOK_SECRET",
+        "description": "A secret string used to configure the GitHub webhook",
+        "generate": "expression",
+        "requires": "[a-zA-Z0-9]{40}"
+    }, {
+        "name": "HTTP_PROXY",
+        "description": "The HTTP proxy connect to internet",
+        "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+    }, {
+        "name": "HTTPS_PROXY",
+        "description": "The HTTPS proxy connect to internet",
+        "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+    }],
+    "objects": [{
+        "kind": "BuildConfig",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-build"
+        },
+        "spec": {
+            "triggers": [{
+                "type": "Generic",
+                "generic": {
+                    "secret": "04e87315934bd93a"
+                }
+            }, {
+                "type": "GitHub",
+                "github": {
+                    "secret": "8c1e42989440bf52"
+                }
+            }, {
+                "type": "ImageChange",
+                "imageChange": {}
+            }, {
+                "type": "ConfigChange"
+            }],
+            "source": {
+                "type": "Git",
+                "git": {
+                    "uri": "${SOURCE_REPOSITORY_URL}",
+                    "ref": "master",
+                    "httpProxy": "${HTTP_PROXY}",
+                    "httpsProxy": "${HTTPS_PROXY}"
+                }
+            },
+            "strategy": {
+                "type": "Source",
+                "sourceStrategy": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "namespace": "openshift",
+                        "name": "jboss-eap64-openshift:1.1"
+                    },
+                    "env": [{
+                        "name": "HTTP_PROXY",
+                        "value": "${HTTP_PROXY}"
+                    }, {
+                        "name": "HTTPS_PROXY",
+                        "value": "${HTTPS_PROXY}"
+                    }, {
+                        "name": "MAVEN_ARGS",
+                        "value": "package -Popenshift -DskipTests -s./settings.xml"
+                    }]
+                }
+            },
+            "output": {
+                "to": {
+                    "kind": "ImageStreamTag",
+                    "name": "eap64-app-image:latest"
+                }
+            },
+            "resources": {}
+        },
+        "status": {
+            "lastVersion": 0
+        }
+    }, {
+        "kind": "ImageStream",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-image",
+            "creationTimestamp": null
+        },
+        "spec": {},
+        "status": {
+            "dockerImageRepository": ""
+        }
+    }, {
+        "kind": "DeploymentConfig",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-deployment"
+        },
+        "spec": {
+            "strategy": {
+                "type": "Rolling",
+                "rollingParams": {
+                    "updatePeriodSeconds": 1,
+                    "intervalSeconds": 1,
+                    "timeoutSeconds": 600,
+                    "maxUnavailable": "25%",
+                    "maxSurge": "25%"
+                },
+                "resources": {}
+            },
+            "triggers": [{
+                "type": "ImageChange",
+                "imageChangeParams": {
+                    "automatic": true,
+                    "containerNames": [
+                        "eap64-app"
+                    ],
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "eap64-app-image:latest"
+                    }
+                }
+            }, {
+                "type": "ConfigChange"
+            }],
+            "replicas": 1,
+            "selector": {
+                "deploymentconfig": "eap64-app"
+            },
+            "template": {
+                "metadata": {
+                    "labels": {
+                        "app": "eap64-app"
+                    }
+                },
+                "spec": {
+                    "volumes": [{
+                        "name": "eap64-app-data",
+                        "persistentVolumeClaim": {
+                            "claimName": "eap64-app-pvc"
+                        }
+                    }],
+                    "containers": [{
+                        "name": "eap64-app",
+                        "image": "eap64-app-image",
+                        "ports": [{
+                            "containerPort": 8080,
+                            "protocol": "TCP"
+                        }, {
+                            "containerPort": 8443,
+                            "protocol": "TCP"
+                        }],
+                        "resources": {},
+                        "volumeMounts": [{
+                            "name": "eap64-app-data",
+                            "mountPath": "/var/lib/eap64-app/data"
+                        }],
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "Always"
+                    }],
+                    "restartPolicy": "Always",
+                    "terminationGracePeriodSeconds": 30,
+                    "dnsPolicy": "ClusterFirst",
+                    "securityContext": {}
+                }
+            }
+        },
+        "status": {}
+    }, {
+        "kind": "Service",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-service",
+            "labels": {
+                "app": "eap64-app"
+            }
+        },
+        "spec": {
+            "ports": [{
+                "name": "8080-tcp",
+                "protocol": "TCP",
+                "port": 8080,
+                "targetPort": 8080
+            }, {
+                "name": "8443-tcp",
+                "protocol": "TCP",
+                "port": 8443,
+                "targetPort": 8443
+            }],
+            "selector": {
+                "deploymentconfig": "eap64-app-deployment"
+            },
+            "type": "ClusterIP",
+            "sessionAffinity": "None"
+        },
+        "status": {
+            "loadBalancer": {}
+        }
+    }, {
+        "kind": "Route",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-route",
+            "labels": {
+                "app": "eap64-app",
+                "router": "external"
+            }
+        },
+        "spec": {
+            "host": "eap64-app.osappext.pink.eu-central-1.aws.openpaas.axa-cloud.com",
+            "to": {
+                "kind": "Service",
+                "name": "eap64-app-service"
+            },
+            "port": {
+                "targetPort": 8080
+            }
+        },
+        "status": {}
+    }, {
+        "kind": "PersistentVolumeClaim",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-pvc"
+        },
+        "spec": {
+            "accessModes": [
+                "ReadWriteOnce"
+            ],
+            "resources": {
+                "requests": {
+                    "storage": "1Gi"
+                }
+            }
+        }
+    }]
+}
