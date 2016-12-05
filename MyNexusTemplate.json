@@ -1,0 +1,216 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "nexus-ephemeral-template",
+        "creationTimestamp": null,
+        "annotations": {
+            "description": "Nexus service, with ephemeral storage. Scaling to more than one replica is not supported",
+            "tags": "repository-managers,nexus"
+        }
+    },
+    "labels": {
+        "template": "nexus-ephemeral-template"
+    },
+    "objects": [{
+        "kind": "DeploymentConfig",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "nexus"
+        },
+        "spec": {
+            "strategy": {
+                "type": "Recreate",
+                "recreateParams": {
+                    "post": {
+                        "failurePolicy": "Ignore",
+                        "execNewPod": {
+                            "containerName": "nexus",
+                            "command": [
+                                "/bin/bash",
+                                "/usr/local/bin/addjbossrepos.sh"
+                            ],
+                            "env": [{
+                                "name": "NEXUS_BASE_URL",
+                                "value": "http://nexus:8081"
+                            }]
+                        }
+                    }
+                },
+                "resources": {}
+            },
+            "triggers": [{
+                "type": "ConfigChange"
+            }, {
+                "type": "ImageChange",
+                "imageChangeParams": {
+                    "automatic": true,
+                    "containerNames": [
+                        "nexus"
+                    ],
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "${IMAGE_NAME}:${IMAGE_TAG}"
+                    }
+                }
+            }],
+            "replicas": 1,
+            "selector": {
+                "deploymentconfig": "nexus"
+            },
+            "template": {
+                "metadata": {
+                    "labels": {
+                        "deploymentconfig": "nexus"
+                    }
+                },
+                "spec": {
+                    "volumes": [{
+                        "name": "pvol",
+                        "emptyDir": {
+                            "medium": ""
+                        }
+                    }],
+                    "containers": [{
+                        "name": "nexus",
+                        "image": "nexus",
+                        "ports": [{
+                            "containerPort": 8081,
+                            "protocol": "TCP"
+                        }],
+                        "volumeMounts": [{
+                            "name": "pvol",
+                            "mountPath": "/sonatype-work"
+                        }],
+                        "livenessProbe": {
+                            "httpGet": {
+                                "port": 8081
+                            },
+                            "initialDelaySeconds": 300,
+                            "timeoutSeconds": 1
+                        },
+                        "readinessProbe": {
+                            "httpGet": {
+                                "port": 8081
+                            },
+                            "initialDelaySeconds": 20,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "requests": {
+                                "memory": "2Gi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent",
+                        "securityContext": {
+                            "capabilities": {},
+                            "privileged": false
+                        },
+                        "env": [{
+                            "name": "HTTP_PROXY",
+                            "value": "${HTTP_PROXY}"
+                        }, {
+                            "name": "HTTPS_PROXY",
+                            "value": "${HTTPS_PROXY}"
+                        }]
+                    }],
+                    "restartPolicy": "Always",
+                    "dnsPolicy": "ClusterFirst",
+                    "serviceAccountName": "nexus",
+                    "serviceAccount": "nexus"
+                }
+            }
+        }
+    }, {
+        "kind": "Route",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "nexus-route",
+            "labels": {
+                "router": "external"
+            }
+        },
+        "spec": {
+            "host": "${APPLICATION_HOSTNAME}",
+            "to": {
+                "kind": "Service",
+                "name": "nexus-service"
+            },
+            "port": {
+                "targetPort": 8081
+            }
+        }
+    }, {
+        "kind": "Route",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "nexus-route-internal",
+            "labels": {
+                "router": "internal"
+            }
+        },
+        "spec": {
+            "host": "${APPLICATION_HOSTNAME_INTERNAL}",
+            "to": {
+                "kind": "Service",
+                "name": "nexus-service"
+            },
+            "port": {
+                "targetPort": 8081
+            }
+        }
+    }, {
+        "kind": "Service",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "nexus-service"
+        },
+        "spec": {
+            "ports": [{
+                "name": "http",
+                "port": 8081,
+                "targetPort": 8081
+            }],
+            "selector": {
+                "deploymentconfig": "nexus"
+            },
+            "type": "ClusterIP",
+            "sessionAffinity": "None"
+        }
+    }],
+    "parameters": [{
+        "name": "APPLICATION_NAME",
+        "displayName": "Application name.",
+        "description": "The name for the application. The service will be named like the application.",
+        "value": "nexus"
+    }, {
+        "name": "APPLICATION_HOSTNAME",
+        "displayName": "Nexus instance hostname",
+        "description": "Custom hostname for service routes.  Leave blank for default hostname, e.g.: \u003capplication-name\u003e.\u003cproject\u003e.\u003cdefault-domain-suffix\u003e",
+        "value": "nexus-bpm.osappext.pink.eu-central-1.aws.openpaas.axa-cloud.com"
+    }, {
+        "name": "APPLICATION_HOSTNAME_INTERNAL",
+        "displayName": "Nexus internal instance hostname",
+        "description": "Custom internal hostname for service routes.  Leave blank for default hostname, e.g.: \u003capplication-name\u003e.\u003cproject\u003e.\u003cdefault-domain-suffix\u003e",
+        "value": "nexus-bpm.osappint.pink.eu-central-1.aws.openpaas.axa-cloud.com"
+    }, {
+        "name": "IMAGE_NAME",
+        "displayName": "Nexus image name",
+        "description": "Nexus image name",
+        "value": "nexus"
+    }, {
+        "name": "IMAGE_TAG",
+        "displayName": "Nexus image tag",
+        "description": "Nexus image tag",
+        "value": "latest"
+    }, {
+        "name": "HTTP_PROXY",
+        "description": "The HTTP proxy connect to internet",
+        "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+    }, {
+        "name": "HTTPS_PROXY",
+        "description": "The HTTPS proxy connect to internet",
+        "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+    }]
+}

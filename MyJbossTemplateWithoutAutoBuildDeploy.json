@@ -2,7 +2,7 @@
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "eap64-app-template",
+        "name": "eap64-app-nexus-cicd-template",
         "creationTimestamp": null,
         "annotations": {
             "description": "An example of BPME application",
@@ -11,7 +11,7 @@
         }
     },
     "labels": {
-        "template": "eap64-app-template"
+        "template": "eap64-app-nexus-cicd-template"
     },
     "parameters": [{
         "name": "SOURCE_REPOSITORY_URL",
@@ -31,6 +31,10 @@
         "name": "HTTPS_PROXY",
         "description": "The HTTPS proxy connect to internet",
         "value": "http://default-http-proxy.pink.eu-central-1.aws.openpaas.axa-cloud.com:8888"
+    }, {
+        "name": "MAVEN_MIRROR_URL",
+        "description": "The Nexus URL",
+        "value": "http://nexus-bpm.osappint.pink.eu-central-1.aws.openpaas.axa-cloud.com/content/groups/public/"
     }],
     "objects": [{
         "kind": "BuildConfig",
@@ -49,11 +53,6 @@
                 "github": {
                     "secret": "8c1e42989440bf52"
                 }
-            }, {
-                "type": "ImageChange",
-                "imageChange": {}
-            }, {
-                "type": "ConfigChange"
             }],
             "source": {
                 "type": "Git",
@@ -81,6 +80,9 @@
                     }, {
                         "name": "MAVEN_ARGS",
                         "value": "package -Popenshift -DskipTests -s ./settings.xml"
+                    }, {
+                        "name": "MAVEN_MIRROR_URL_",
+                        "value": "${MAVEN_MIRROR_URL}"
                     }]
                 }
             },
@@ -94,6 +96,40 @@
         },
         "status": {
             "lastVersion": 0
+        }
+    }, {
+        "kind": "BuildConfig",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-build-pipeline"
+        },
+        "spec": {
+            "triggers": [{
+                "type": "Generic",
+                "generic": {
+                    "secret": "04e87315934bd93a"
+                }
+            }, {
+                "type": "GitHub",
+                "github": {
+                    "secret": "8c1e42989440bf52"
+                }
+            }],
+            "source": {
+                "type": "Git",
+                "git": {
+                    "uri": "${SOURCE_REPOSITORY_URL}",
+                    "ref": "master",
+                    "httpProxy": "${HTTP_PROXY}",
+                    "httpsProxy": "${HTTPS_PROXY}"
+                }
+            },
+            "strategy": {
+                "type": "JenkinsPipeline",
+                "jenkinsPipelineStrategy": {
+                    "jenkinsfilePath": "Jenkinsfile1.txt"
+                }
+            }
         }
     }, {
         "kind": "ImageStream",
@@ -127,7 +163,7 @@
             "triggers": [{
                 "type": "ImageChange",
                 "imageChangeParams": {
-                    "automatic": true,
+                    "automatic": false,
                     "containerNames": [
                         "eap64-app"
                     ],
@@ -139,7 +175,7 @@
             }, {
                 "type": "ConfigChange"
             }],
-            "replicas": 1,
+            "replicas": 0,
             "selector": {
                 "app": "eap64-app"
             },
@@ -172,7 +208,7 @@
                             "mountPath": "/var/lib/eap64-app/data"
                         }],
                         "terminationMessagePath": "/dev/termination-log",
-                        "imagePullPolicy": "Always"
+                        "imagePullPolicy": "IfNotPresent"
                     }],
                     "restartPolicy": "Always",
                     "terminationGracePeriodSeconds": 30,
@@ -234,6 +270,27 @@
         },
         "status": {}
     }, {
+        "kind": "Route",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "eap64-app-route-internal",
+            "labels": {
+                "app": "eap64-app",
+                "router": "internal"
+            }
+        },
+        "spec": {
+            "host": "eap64-app.osappint.pink.eu-central-1.aws.openpaas.axa-cloud.com",
+            "to": {
+                "kind": "Service",
+                "name": "eap64-app-service"
+            },
+            "port": {
+                "targetPort": 8080
+            }
+        },
+        "status": {}
+    }, {
         "kind": "PersistentVolumeClaim",
         "apiVersion": "v1",
         "metadata": {
@@ -250,4 +307,6 @@
             }
         }
     }]
+}
+
 }
